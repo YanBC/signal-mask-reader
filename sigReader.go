@@ -91,7 +91,7 @@ func parseMask(sigMap map[int]string, num_mask uint64) []string {
 	binary_mask := strconv.FormatUint(num_mask, 2)
 	sig := 1
 	for idx := len(binary_mask) - 1; idx >= 0; idx-- {
-		if string(binary_mask[idx]) == "1" {
+		if string(binary_mask[idx]) == "1" && sigMap[sig] != "" {
 			ret = append(ret, sigMap[sig])
 		}
 		sig++
@@ -128,26 +128,26 @@ func main() {
 		log.Fatal(err.Error())
 	}
 	sigPnd_arr := parseMask(signal_map, sigPnd_num)
-	fmt.Println("Pending Signal: ", sigPnd_arr)
+	fmt.Println("Pending Signal: ", "[", strings.Join(sigPnd_arr, ", "), "]")
 
 	sigBlk_num, err := grapMask(status_str, sigBlk)
 	if err != nil {
 		log.Fatal(err.Error())
 	}
 	sigBlk_arr := parseMask(signal_map, sigBlk_num)
-	fmt.Println("Blocked Signal: ", sigBlk_arr)
+	fmt.Println("Blocked Signal: ", "[", strings.Join(sigBlk_arr, ", "), "]")
 
 	sigIgn_num, err := grapMask(status_str, sigIgn)
 	if err != nil {
 		log.Fatal(err.Error())
 	}
 	sigIgn_arr := parseMask(signal_map, sigIgn_num)
-	fmt.Println("Ignored Signal: ", sigIgn_arr)
+	fmt.Println("Ignored Signal: ", "[", strings.Join(sigIgn_arr, ", "), "]")
 
 	sigCgt_num, err := grapMask(status_str, sigCgt)
 	if err != nil {
 		log.Fatal(err.Error())
 	}
 	sigCgt_arr := parseMask(signal_map, sigCgt_num)
-	fmt.Println("Caught Signal: ", sigCgt_arr)
+	fmt.Println("Caught Signal: ", "[", strings.Join(sigCgt_arr, ", "), "]")
 }
