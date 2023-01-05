@@ -9,4 +9,6 @@ go build sigReader.go
 ./sigReader -h
 # show process 29966 signal mask
 ./sigReader -pid 29966
+# parse signal mask 7be3c0fe28014a03
+./sigReader -mask 7be3c0fe28014a03
 ```
