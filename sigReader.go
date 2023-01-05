@@ -16,6 +16,14 @@ const (
 	VERSION = "1.0.0"
 )
 
+const (
+	sigPnd = "SigPnd"
+	shdPnd = "ShdPnd"
+	sigBlk = "SigBlk"
+	sigIgn = "SigIgn"
+	sigCgt = "SigCgt"
+)
+
 func getSignalMap() map[int]string {
 	ret := make(map[int]string)
 	for i := 0; i < 1024; i++ {
@@ -114,6 +122,16 @@ func printHelpAndExit() {
 	os.Exit(-2)
 }
 
+func grapAndParseMask(status_str string, mask_str string, signal_map map[int]string) {
+	sig_num, err := grapMask(status_str, mask_str)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	sig_arr := parseMask(signal_map, sig_num)
+	fmt.Println(mask_str, strings.Join(sig_arr, ", "))
+}
+
 func printProcessMask(pid *string) {
 	status_file_path := filepath.Join("/proc", *pid, "status")
 	status_file, err := os.ReadFile(status_file_path)
@@ -121,42 +139,15 @@ func printProcessMask(pid *string) {
 		printErrorAndExit(err.Error())
 	}
 	status_str := string(status_file)
-	// fmt.Println(status_str)
 
 	signal_map := getSignalMap()
-
-	sigPnd := "SigPnd"
-	sigBlk := "SigBlk"
-	sigIgn := "SigIgn"
-	sigCgt := "SigCgt"
-
-	sigPnd_num, err := grapMask(status_str, sigPnd)
-	if err != nil {
-		printErrorAndExit(err.Error())
+	sig_mask_strings := []string{
+		sigPnd, shdPnd, sigBlk, sigIgn, sigCgt,
 	}
-	sigPnd_arr := parseMask(signal_map, sigPnd_num)
-	fmt.Println("Pending Signal: ", "[", strings.Join(sigPnd_arr, ", "), "]")
 
-	sigBlk_num, err := grapMask(status_str, sigBlk)
-	if err != nil {
-		printErrorAndExit(err.Error())
+	for _, mask_str := range sig_mask_strings {
+		grapAndParseMask(status_str, mask_str, signal_map)
 	}
-	sigBlk_arr := parseMask(signal_map, sigBlk_num)
-	fmt.Println("Blocked Signal: ", "[", strings.Join(sigBlk_arr, ", "), "]")
-
-	sigIgn_num, err := grapMask(status_str, sigIgn)
-	if err != nil {
-		printErrorAndExit(err.Error())
-	}
-	sigIgn_arr := parseMask(signal_map, sigIgn_num)
-	fmt.Println("Ignored Signal: ", "[", strings.Join(sigIgn_arr, ", "), "]")
-
-	sigCgt_num, err := grapMask(status_str, sigCgt)
-	if err != nil {
-		printErrorAndExit(err.Error())
-	}
-	sigCgt_arr := parseMask(signal_map, sigCgt_num)
-	fmt.Println("Caught Signal: ", "[", strings.Join(sigCgt_arr, ", "), "]")
 }
 
 func printMaskParse(mask *string) {
