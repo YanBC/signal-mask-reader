@@ -114,14 +114,7 @@ func printHelpAndExit() {
 	os.Exit(-2)
 }
 
-func main() {
-	pid := flag.String("pid", "", "process id")
-	flag.Parse()
-
-	if *pid == "" {
-		printHelpAndExit()
-	}
-
+func printProcessMask(pid *string) {
 	status_file_path := filepath.Join("/proc", *pid, "status")
 	status_file, err := os.ReadFile(status_file_path)
 	if err != nil {
@@ -164,4 +157,32 @@ func main() {
 	}
 	sigCgt_arr := parseMask(signal_map, sigCgt_num)
 	fmt.Println("Caught Signal: ", "[", strings.Join(sigCgt_arr, ", "), "]")
+}
+
+func printMaskParse(mask *string) {
+	num, err := strconv.ParseUint(*mask, 16, len(*mask)*4)
+	if err != nil {
+		printErrorAndExit(err.Error())
+	}
+
+	signal_map := getSignalMap()
+	sig_arr := parseMask(signal_map, num)
+	fmt.Println("Signals: ", "[", strings.Join(sig_arr, ", "), "]")
+}
+
+func main() {
+	pid := flag.String("pid", "", "process id")
+	mask := flag.String("mask", "", "mask string")
+	flag.Parse()
+
+	if *pid == "" && *mask == "" {
+		printHelpAndExit()
+	}
+
+	if *pid != "" {
+		printProcessMask(pid)
+	} else if *mask != "" {
+		printMaskParse(mask)
+	}
+
 }
