@@ -3,7 +3,6 @@ package main
 import (
 	"flag"
 	"fmt"
-	"log"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -11,6 +10,10 @@ import (
 	"syscall"
 
 	"golang.org/x/sys/unix"
+)
+
+const (
+	VERSION = "1.0.0"
 )
 
 func getSignalMap() map[int]string {
@@ -100,18 +103,29 @@ func parseMask(sigMap map[int]string, num_mask uint64) []string {
 	return ret
 }
 
+func printErrorAndExit(err_msg string) {
+	fmt.Println(err_msg)
+	os.Exit(-1)
+}
+
+func printHelpAndExit() {
+	fmt.Println("sigReader Version", VERSION)
+	fmt.Printf("Usage: %s -h\n", os.Args[0])
+	os.Exit(-2)
+}
+
 func main() {
 	pid := flag.String("pid", "", "process id")
 	flag.Parse()
 
 	if *pid == "" {
-		log.Fatal("You must specify a process id")
+		printHelpAndExit()
 	}
 
 	status_file_path := filepath.Join("/proc", *pid, "status")
 	status_file, err := os.ReadFile(status_file_path)
 	if err != nil {
-		log.Fatal(err)
+		printErrorAndExit(err.Error())
 	}
 	status_str := string(status_file)
 	// fmt.Println(status_str)
@@ -125,28 +139,28 @@ func main() {
 
 	sigPnd_num, err := grapMask(status_str, sigPnd)
 	if err != nil {
-		log.Fatal(err.Error())
+		printErrorAndExit(err.Error())
 	}
 	sigPnd_arr := parseMask(signal_map, sigPnd_num)
 	fmt.Println("Pending Signal: ", "[", strings.Join(sigPnd_arr, ", "), "]")
 
 	sigBlk_num, err := grapMask(status_str, sigBlk)
 	if err != nil {
-		log.Fatal(err.Error())
+		printErrorAndExit(err.Error())
 	}
 	sigBlk_arr := parseMask(signal_map, sigBlk_num)
 	fmt.Println("Blocked Signal: ", "[", strings.Join(sigBlk_arr, ", "), "]")
 
 	sigIgn_num, err := grapMask(status_str, sigIgn)
 	if err != nil {
-		log.Fatal(err.Error())
+		printErrorAndExit(err.Error())
 	}
 	sigIgn_arr := parseMask(signal_map, sigIgn_num)
 	fmt.Println("Ignored Signal: ", "[", strings.Join(sigIgn_arr, ", "), "]")
 
 	sigCgt_num, err := grapMask(status_str, sigCgt)
 	if err != nil {
-		log.Fatal(err.Error())
+		printErrorAndExit(err.Error())
 	}
 	sigCgt_arr := parseMask(signal_map, sigCgt_num)
 	fmt.Println("Caught Signal: ", "[", strings.Join(sigCgt_arr, ", "), "]")
