@@ -7,13 +7,10 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
-	"syscall"
-
-	"golang.org/x/sys/unix"
 )
 
 const (
-	VERSION = "1.0.0"
+	VERSION = "1.0.1"
 )
 
 const (
@@ -24,95 +21,11 @@ const (
 	sigCgt = "SigCgt"
 )
 
-func getSignalMap() map[int]string {
-	ret := make(map[int]string)
-	for i := 0; i < 1024; i++ {
-		ss := syscall.Signal(i)
-		name := unix.SignalName(ss)
-		ret[i] = name
-	}
-	return ret
-}
-
-func isNumeric(str string) bool {
-	_, err := strconv.Atoi(str)
-	if err != nil {
-		if str == "a" || str == "b" || str == "c" || str == "d" || str == "e" || str == "f" {
-			return true
-		} else {
-			return false
-		}
-	} else {
-		return true
-	}
-}
-
-func isWhiteSpace(char string) bool {
-	if char == " " || char == "\n" || char == "\t" {
-		return true
-	} else {
-		return false
-	}
-}
-
-func grapMask(str string, sub_str string) (uint64, error) {
-	idx := strings.Index(str, sub_str)
-	if idx == -1 {
-		return 0, fmt.Errorf("signal mask not found")
-	}
-
-	var start_pos int
-	var end_pos int
-	current := idx + len(sub_str)
-	for {
-		char := string(str[current])
-		if char == ":" || isWhiteSpace(char) {
-			current = current + 1
-		} else if isNumeric(char) {
-			start_pos = current
-			current = current + 1
-			break
-		} else {
-			return 0, fmt.Errorf("%s in string", char)
-		}
-	}
-
-	for {
-		char := string(str[current])
-		if isNumeric(char) {
-			current = current + 1
-		} else {
-			end_pos = current
-			break
-		}
-	}
-
-	num_str := string(str[start_pos:end_pos])
-	num, err := strconv.ParseUint(num_str, 16, len(num_str)*4)
-	if err != nil {
-		return 0, err
-	}
-
-	return num, nil
-}
-
-func parseMask(sigMap map[int]string, num_mask uint64) []string {
-	ret := make([]string, 0, 1)
-
-	binary_mask := strconv.FormatUint(num_mask, 2)
-	sig := 1
-	for idx := len(binary_mask) - 1; idx >= 0; idx-- {
-		if string(binary_mask[idx]) == "1" && sigMap[sig] != "" {
-			ret = append(ret, sigMap[sig])
-		}
-		sig++
-	}
-
-	return ret
-}
-
-func printErrorAndExit(err_msg string) {
-	fmt.Println(err_msg)
+//
+// handle error
+//
+func printErrorAndExit(errMsg string) {
+	fmt.Println(errMsg)
 	os.Exit(-1)
 }
 
@@ -122,58 +35,59 @@ func printHelpAndExit() {
 	os.Exit(-2)
 }
 
-func grapAndParseMask(status_str string, mask_str string, signal_map map[int]string) {
-	sig_num, err := grapMask(status_str, mask_str)
+//
+// main
+//
+func grapAndParseSignalSet(statusStr string, sigSetName string) {
+	signalSet, err := grapSignalSet(statusStr, sigSetName)
 	if err != nil {
-		fmt.Println(err)
+		fmt.Println(sigSetName, err)
 		return
 	}
-	sig_arr := parseMask(signal_map, sig_num)
-	fmt.Println(mask_str, strings.Join(sig_arr, ", "))
+	signalSetArr := parseSignalSet(signalSet)
+	fmt.Println(sigSetName, strings.Join(signalSetArr, ", "))
 }
 
-func printProcessMask(pid *string) {
-	status_file_path := filepath.Join("/proc", *pid, "status")
-	status_file, err := os.ReadFile(status_file_path)
+func printProcess(pid *string) {
+	statusFilePath := filepath.Join("/proc", *pid, "status")
+	statusFile, err := os.ReadFile(statusFilePath)
 	if err != nil {
 		printErrorAndExit(err.Error())
 	}
-	status_str := string(status_file)
+	statusStr := string(statusFile)
 
-	signal_map := getSignalMap()
-	sig_mask_strings := []string{
+	sigSetNames := []string{
 		sigPnd, shdPnd, sigBlk, sigIgn, sigCgt,
 	}
 
-	for _, mask_str := range sig_mask_strings {
-		grapAndParseMask(status_str, mask_str, signal_map)
+	for _, sigSetName := range sigSetNames {
+		grapAndParseSignalSet(statusStr, sigSetName)
 	}
 }
 
-func printMaskParse(mask *string) {
-	num, err := strconv.ParseUint(*mask, 16, len(*mask)*4)
+func printSignalSet(signalSetStr *string) {
+	signalSet, err := strconv.ParseUint(*signalSetStr, 16, len(*signalSetStr)*4)
 	if err != nil {
 		printErrorAndExit(err.Error())
 	}
 
-	signal_map := getSignalMap()
-	sig_arr := parseMask(signal_map, num)
-	fmt.Println("Signals: ", "[", strings.Join(sig_arr, ", "), "]")
+	signalSetArr := parseSignalSet(signalSet)
+	fmt.Println("Signals: ", "[", strings.Join(signalSetArr, ", "), "]")
 }
 
 func main() {
-	pid := flag.String("pid", "", "process id")
-	mask := flag.String("mask", "", "mask string")
+	pid := flag.String("pid", "", "process id / thread id")
+	signalSetStr := flag.String("parse", "", "parse signal set string")
 	flag.Parse()
 
-	if *pid == "" && *mask == "" {
+	if *pid == "" && *signalSetStr == "" {
 		printHelpAndExit()
 	}
 
 	if *pid != "" {
-		printProcessMask(pid)
-	} else if *mask != "" {
-		printMaskParse(mask)
+		printProcess(pid)
+	} else if *signalSetStr != "" {
+		printSignalSet(signalSetStr)
 	}
 
 }

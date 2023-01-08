@@ -1,6 +1,6 @@
 ## Build
 ```bash
-go build sigReader.go
+go build -o sigReader sigReader.go utils.go
 ```
 
 ## Run
